@@ -1,0 +1,109 @@
+#!/usr/bin/python
+
+# This is a FORTH to C compiler, handling only a subset of FORTH.
+# Modified from <http://yosefk.com/blog/c-as-an-intermediate-language.html>
+
+import sys, getopt
+
+special = { # "special" words - can't emit S=WORD(S)
+  ':':'',
+  ';':'return CHK(F,S); }',
+  '.':'S = PRINT(F,S);',
+  '@':'S = LOAD(F,S);',
+  '!':'S = STORE(F,S);',
+  'c@':'S = LOAD(F,S);',
+  'c!':'S = STORE(F,S);',
+  'cell':'S = PUSH(F,S,sizeof(DATA));',
+  'begin':'do {',
+  'again':'} while(1);',
+  'until':'} while(!*S++);',
+  'repeat':'} while(1);',
+  'while':'if(!*S++) break;',
+  'if':'if(*S++) {',
+  'else':'} else {',
+  'then':'}',
+  'for':'for(DATA LABEL() = *S++; LABEL() > 0; LABEL()--){\n', # LABEL macro uses '__LINE__'
+  'next':'}',
+}
+
+# binary operators
+binops='+ - * / = < > mod'.split()
+op2c={'=':'==','mod':'%','and':'&','or':'|','xor':'^','lshift':'<<','rshift':'>>'}
+# TODO: Mangle Forth variable names if they contain identifiers that are not
+# valid C identifiers
+mangle={'.':'PRINT',',':'COMMA','!':'STORE','@':'LOAD'}
+
+def forth2c(inf,out,lndir,entry):
+  var={'h0':0,'sp0': 1,'argc':2,'argv':3}
+  n = 0
+  v = len(var)
+  last = ""
+  for line in inf:
+    n += 1
+    if lndir: # emit line info for C tools (debuggers, etc.) - a nice option C gives us
+      print >> out,'\n#line',n,'"%s"'%infile
+    for token in line.lower().strip().split():
+      if token == '\\':
+          break
+      elif token == 'recurse':
+        print >> out,'S=%s(F, S);'%last
+      elif token in special:
+        print >> out,special[token],
+      else:
+        try:
+          num = int(token)
+          print >> out, 'S = PUSH(F,S,%dll);'%num,
+        except ValueError:
+          if token in binops:
+            print >> out,'S = OP2(F,S,%s);'%op2c.get(token,token),
+          else:
+            if defining:
+              static = 'static'
+              if token == entry:
+                  static = ' '
+              print >> out,'%s DATA* '%static+token+'(FORTH *F, DATA *S) { CHK(F,S);',
+              last = token
+            elif variable:
+              var[token] = v
+              v += 1
+            else: # call
+              if token in var:
+                print >> out,'S = PUSH(F,S,(DATA)&(F->stack[%d]'%var[token]+'/* %s */));'%token,
+              elif token != 'variable':
+                print >> out,'S=%s(F,S);'%token,
+      defining = token == ':'
+      variable = token == 'variable'
+
+outfile='forth_program.c'
+entry='cold'
+lndir=0
+defmain=0
+size=4096
+optlist, args = getopt.getopt(sys.argv[1:], "ho:le:s:m")
+
+for o, a in optlist:
+  if o == '-h':
+    usage()
+    sys.exit()
+  elif o == '-o':
+    outfile = a
+  elif o == '-l':
+    lndir = 1
+  elif o == '-e':
+    entry = a
+  elif o == '-m':
+    defmain = 1
+  elif o == '-s':
+    size = a
+  else:
+    assert False, "invalid option"
+
+
+out = open(outfile,'w')
+print >> out, '#define FORTH_ENTRY_POINT %s'%entry
+print >> out, '#define FORTH_SIZE %d'%size
+print >> out, '#include "forth_runtime.h"\n'
+for infile in args:
+  forth2c(open(infile),out,lndir,entry)
+print >> out, "int main(int argc, char **argv) { return forth_main(argc, argv); }"
+
