@@ -1,35 +1,45 @@
 
 : cr 13 emit 10 emit ;
 : negate 0 swap - ;
+: 1- 1 - ;
+\ : cell+ cell + ;
+\ : cells cell * ;
+\ : chars cell / ;
+: +! tuck @ + swap ! ;
+: here v0 @ ;
+: , here ! cell v0 +! ;
+\ : 1+! 1 swap +! ;
+\ : c, here c! v0 1+! ;
 
-: printnum
+: u.
   dup
   10 mod 48 +
   swap 10 / dup
-  if printnum recurse then
+  if recurse 0 then
   drop emit ;
 
-
-: dot
+: .
   dup 0 <
   if 45 emit negate then
-  printnum
+  u.
   32 emit ;
 
 : COUNTDOWN
   BEGIN
-    DUP dot
-    1 -
+    DUP .
+    1-
     DUP 0 =
   UNTIL
   DROP ;
 
-: cold \ ( -- x : program entry point )
-  1 99 3 over . . . . 
 
-  cr
+\ This test program is just to test the features of the forth2c compiler
+\ and does not do anything sensible.
+\
+: cold \ ( -- x : program entry point )
+  -33 .
+  here 88 , 33 , cell + @ .
   3 for 101 emit next cr
- 
   1 if 5 countdown then
   cr
   10 6 gcd .

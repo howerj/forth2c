@@ -1,4 +1,4 @@
-CFLAGS=-g -std=c99 -Wall -Wextra -pedantic 
+CFLAGS=-g -std=c99 -Wall -Wextra -pedantic -O2
 SOURCES=gcd.fth main.fth
 TARGET=forth_program
 
