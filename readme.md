@@ -1,8 +1,8 @@
 # forth2c compiler and runtime
 
 From <http://yosefk.com/blog/c-as-an-intermediate-language.html>, with
-a few minor modifications. This implements a simple runtime for Forth
-and a Forth to C compiler.
+modifications. This implements a C runtime for the Forth compiled to
+C and a Forth to C compiler.
 
 Also of note:
 

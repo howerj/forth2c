@@ -38,12 +38,13 @@ special = { # "special" words - can't emit S=WORD(S)
   'if':'if(*S++) {',
   'else':'} else {',
   'then':'}',
-  'for':'for(DATA LABEL() = *S++; LABEL() > 0; LABEL()--){\n', # LABEL macro uses '__LINE__'
-  'next':'}',
+  'for':'for(*(++F->R) = *S++; *F->R > 0; (*F->R)--){',
+  'next':'} F->R--;',
 }
 
-binops='+ - * / = < > mod and or xor lshift rshift'.split() # binary operators
-op2c={'=':'==','mod':'%','and':'&','or':'|','xor':'^','lshift':'<<','rshift':'>>'}
+unops='not invert 1+ 1- 2+ 2-'.split()
+binops='+ - * / = < > mod and or xor lshift rshift'.split()
+op2c={'=':'==','mod':'%','and':'&','or':'|','xor':'^','lshift':'<<','rshift':'>>','not':'-!','1-':'-1 +','2-':'-2 +','invert':'~'}
 
 def mangle(s):
   m={'.':'PRINT',',':'COMMA','!':'STORE','@':'LOAD','#':'HASH','+':'PLUS','-':'MINUS','0':'ZERO','1':'ONE','2':'TWO'}
@@ -55,11 +56,13 @@ def mangle(s):
       r += c
   return r
 
-var={'h0':0,'sp0': 1,'argc':2,'argv':3,'v0':4}
+var={'h0':0,'size':1,'rp':2} # 'h0' must be first declared variable
 nvars = len(var)
 
 def forth2c(inf,out,lndir,entry):
   global nvars
+  defining=0
+  variable=0
   last = ""
   n = 0
   for line in inf:
@@ -79,7 +82,9 @@ def forth2c(inf,out,lndir,entry):
           num = int(token)
           print >> out, 'S = PUSH(F,S,%dll);'%num,
         except ValueError:
-          if token in binops:
+          if token in unops:
+            print >> out,'S = OP1(F,S,%s);'%op2c.get(token,token),
+          elif token in binops:
             print >> out,'S = OP2(F,S,%s);'%op2c.get(token,token),
           else:
             if defining:
@@ -129,5 +134,9 @@ print >> out, '#define FORTH_SIZE %d'%size
 print >> out, '#include "forth_runtime.h"\n'
 for infile in args:
   forth2c(open(infile),out,lndir,entry)
-print >> out, "int main(int argc, char **argv) { return FORTH_MAIN(argc, argv, %d * sizeof(DATA)); }"%nvars
-
+print >> out, "int main(void) { "
+print >> out, "  static DATA stack[FORTH_SIZE];"
+print >> out, "  FORTH F;"
+print >> out, "  FORTH_INIT(&F, %d, stack, FORTH_SIZE);"%nvars
+print >> out, "  return *(%s(&F, F.stack+FORTH_SIZE));"%entry
+print >> out, "}"

@@ -1,15 +1,16 @@
+variable sp0
 
 : cr 13 emit 10 emit ;
 : negate 0 swap - ;
-: 1- 1 - ;
 \ : cell+ cell + ;
 \ : cells cell * ;
 \ : chars cell / ;
 : +! tuck @ + swap ! ;
-: here v0 @ ;
-: , here ! cell v0 +! ;
+: here h0 h0 @ + ;
+: , here ! cell h0 +! ;
 \ : 1+! 1 swap +! ;
-\ : c, here c! v0 1+! ;
+\ : c, here c! h0 1+! ;
+\ : r@ rp @ ;
 
 : u.
   dup
@@ -32,11 +33,10 @@
   UNTIL
   DROP ;
 
-
 \ This test program is just to test the features of the forth2c compiler
 \ and does not do anything sensible.
 \
-: cold \ ( -- x : program entry point )
+: test
   -33 .
   here 88 , 33 , cell + @ .
   3 for 101 emit next cr
@@ -45,6 +45,10 @@
   10 6 gcd .
   35 75 gcd .
   12856 3248 gcd .
-  cr
-  0 ;
+  cr ;
+
+: cold \ ( -- x : program entry point )
+  sp sp0 ! \ initialize sp0 to the stack pointer
+  test     \ run our program
+  0 ;      \ return zero (no errors)
 

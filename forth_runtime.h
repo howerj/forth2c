@@ -5,25 +5,20 @@
 #include <assert.h>
 #include <stdint.h>
 
-typedef intptr_t DATA;
-
-#ifndef FORTH_SIZE
-#define FORTH_SIZE (4096u)
-#endif
-
 #ifndef FORTH_ENTRY_POINT
 #define FORTH_ENTRY_POINT cold
 #endif
 
-struct forth { DATA *stack; size_t max; FILE *in, *out; };
+typedef intptr_t DATA;
 typedef struct forth FORTH;
+struct forth { DATA *stack, *R; size_t max; FILE *in, *out; };
 
 DATA *FORTH_ENTRY_POINT(FORTH *F, DATA *S);
 
 static inline DATA *CHK(FORTH *F, DATA *S) { assert(F && S && S <= (F->stack + F->max) && S >= F->stack); return S; }
 
+#define OP1(F, S, op) (S[0] = op S[0], CHK(F, S))
 #define OP2(F, S, op) (S[1] = S[1] op S[0], CHK(F, S+1))
-#define LABEL() _ ## __LINE__
 
 static inline DATA *PUSH(FORTH *F, DATA *S, DATA item)  { CHK(F,--S); *S = item; return CHK(F,S); }
 static inline DATA *LOAD(FORTH *F, DATA *S)   { CHK(F,S); DATA V = S[0]; S[0] = *(DATA*)V; return CHK(F,S); }
@@ -37,19 +32,15 @@ static inline DATA *tuck(FORTH *F, DATA *S)   { CHK(F,--S); S[0]=S[1]; S[1]=S[2]
 static inline DATA *over(FORTH *F, DATA *S)   { CHK(F,--S); S[0]=S[2]; return CHK(F,S); }
 static inline DATA *key(FORTH *F, DATA *S)    { CHK(F,--S); *S = fgetc(F->in); return CHK(F,S); }
 static inline DATA *emit(FORTH *F, DATA *S)   { (void)fputc(S[0], F->out); return CHK(F,S+1); }
-static inline DATA *depth(FORTH *F, DATA *S)  { return PUSH(F, S, (DATA)(&F->stack[F->max] - S)); }
+static inline DATA *sp(FORTH *F, DATA *S)     { return PUSH(F, S, (DATA)S); }
 
-int FORTH_MAIN(int argc, char **argv, DATA here) {
-	static DATA stack[FORTH_SIZE];
-	FORTH F = { .stack = stack, .max = FORTH_SIZE, }; 
-	F.stack[0] = (DATA)&stack[0];
-	F.stack[1] = (DATA)(&stack[0] + FORTH_SIZE);
-	F.stack[2] = (DATA)argc;
-	F.stack[3] = (DATA)argv;
-	F.stack[4] = here + (DATA)F.stack;
-	F.in  = stdin; 
-	F.out = stdout; 
-	return *(FORTH_ENTRY_POINT(&F, F.stack+F.max)); 
+static inline FORTH *FORTH_INIT(FORTH *F, DATA start, DATA *stack, DATA elements) {
+	assert(F && stack);
+	*F = (FORTH){ .stack = stack, .R = &stack[elements/2], .max = elements, .in = stdin, .out = stdout };
+	stack[0] = start    * sizeof (DATA);
+	stack[1] = elements * sizeof (DATA);
+	stack[2] = (DATA)&F->R;
+	return F;
 }
 
 #endif
