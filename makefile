@@ -18,6 +18,9 @@ ${TARGET}: ${TARGET}.c forth_runtime.h
 	${CC} ${CFLAGS} -o $@ ${TARGET}.c
 	#-strip $@
 
+cppex: cppex.cpp
+	${CXX} -std=c++17 $< -o $@ -lstdc++
+
 clean:
-	rm -fv ${TARGET}.c ${TARGET}
+	rm -fv ${TARGET}.c ${TARGET} cppex
 
