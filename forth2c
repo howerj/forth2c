@@ -68,39 +68,39 @@ def forth2c(inf,out,lndir,entry):
   for line in inf:
     n += 1
     if lndir: # emit line info for C tools (debuggers, etc.) - a nice option C gives us
-      print >> out,'\n#line',n,'"%s"'%infile
+      print('\n#line',n,'"%s"'%infile, file=out)
     for token in line.lower().strip().split():
       mangled = mangle(token)
       if token == '\\':
           break
       elif token == 'recurse':
-        print >> out,'S=%s(F, S);'%mangle(last)
+        print('S=%s(F, S);'%mangle(last), file=out)
       elif token in special:
-        print >> out,special[token],
+        print(special[token], file=out)
       else:
         try:
           num = int(token)
-          print >> out, 'S = PUSH(F,S,%dll);'%num,
+          print('S = PUSH(F,S,%dll);'%num, file=out)
         except ValueError:
           if token in unops:
-            print >> out,'S = OP1(F,S,%s);'%op2c.get(token,token),
+            print('S = OP1(F,S,%s);'%op2c.get(token,token), file=out)
           elif token in binops:
-            print >> out,'S = OP2(F,S,%s);'%op2c.get(token,token),
+            print('S = OP2(F,S,%s);'%op2c.get(token,token), file=out)
           else:
             if defining:
               static = 'static'
               if token == entry:
                 static = ' '
-              print >> out,'%s DATA* '%static+mangled+'(FORTH *F, DATA *S) { CHK(F,S);',
+              print('%s DATA* '%static+mangled+'(FORTH *F, DATA *S) { CHK(F,S);',file=out)
               last = token
             elif variable:
               var[token] = nvars
               nvars += 1
             else: # call
               if token in var:
-                print >> out,'S = PUSH(F,S,(DATA)&(F->stack[%d]'%var[token]+'/* %s */));'%token,
+                print('S = PUSH(F,S,(DATA)&(F->stack[%d]'%var[token]+'/* %s */));'%token,file=out)
               elif token != 'variable':
-                print >> out,'S=%s(F,S);'%mangled,
+                print('S=%s(F,S);'%mangled,file=out)
       defining = token == ':'
       variable = token == 'variable'
 
@@ -113,7 +113,7 @@ optlist, args = getopt.getopt(sys.argv[1:], "ho:le:s:m")
 
 for o, a in optlist:
   if o == '-h':
-    print halp
+    print(halp)
     sys.exit()
   elif o == '-o':
     outfile = a
@@ -129,14 +129,14 @@ for o, a in optlist:
     assert False, "invalid option"
 
 out = open(outfile,'w')
-print >> out, '#define FORTH_ENTRY_POINT %s'%entry
-print >> out, '#define FORTH_SIZE %d'%size
-print >> out, '#include "forth_runtime.h"\n'
+print('#define FORTH_ENTRY_POINT %s'%entry,file=out)
+print('#define FORTH_SIZE (%d)'%size,file=out)
+print('#include "forth_runtime.h"\n',file=out)
 for infile in args:
   forth2c(open(infile),out,lndir,entry)
-print >> out, "int main(void) { "
-print >> out, "  static DATA stack[FORTH_SIZE];"
-print >> out, "  FORTH F;"
-print >> out, "  FORTH_INIT(&F, %d, stack, FORTH_SIZE);"%nvars
-print >> out, "  return *(%s(&F, F.stack+FORTH_SIZE));"%entry
-print >> out, "}"
+print("int main(void) { ",file=out)
+print("  static DATA stack[FORTH_SIZE];",file=out)
+print("  FORTH F;",file=out)
+print("  FORTH_INIT(&F, %d, stack, FORTH_SIZE);"%nvars,file=out)
+print("  return *(%s(&F, F.stack+FORTH_SIZE));"%entry,file=out)
+print("}",file=out)

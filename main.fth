@@ -33,8 +33,8 @@ variable sp0
   UNTIL
   DROP ;
 
-\ This test program is just to test the features of the forth2c compiler
-\ and does not do anything sensible.
+\ This test program is just to test the features of the 
+\ forth2c compiler and does not do anything sensible.
 \
 : test
   -33 .

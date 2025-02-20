@@ -12,6 +12,8 @@ Also of note:
 porting a [Forth][] implementation to a new CPU, such as my [bit-serial CPU][]
 project. Using a small python script is much simpler than making a cross
 compiler or an assembler in C.
+* The generated functions could be mangled better, perhaps to have some kind
+of prefix like `forth_`.
 
 [author]: http://yosefk.com/
 [me]: howe.r.j.89@gmail.com
